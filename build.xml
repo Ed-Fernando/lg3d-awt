@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project basedir="." default="jar" name="lg3d-awt">
+
+    <property name="top.dir" location=".."/>
+    <property name="current.dir" location="."/>
+
+    <!-- Use my-build.properties to override default values in build.properties -->
+    <property file="my.build.properties"/>
+    <property file="build.properties"/>
+
+    <property name="project.name" value="${ant.project.name}"/>
+
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+        <classpath>
+            <pathelement location="${build-import.dir}/ant-contrib.jar"/>
+        </classpath>
+    </taskdef>
+    
+    <!-- Do platform/x11/environment specific setup common to all tasks -->
+    <import file="${build-import.dir}/build-setup.xml"/>
+
+    <!-- the lg3d-awt project will only build on Mustang (Java 1.6) or above.. -->
+    <if>
+	<not><isset property="build.java6"/></not>
+	<then>
+	    <fail message="lg3d-awt can only built on the Java 6 or above platform."/>
+	</then>
+    </if>
+
+    <property name="platform.src.dir" value="${src.dir}/${platform-src.name}"/>
+
+    <target name="init" description="Initial set-up" unless="init.done">
+        <property name="init.done" value="true"/>
+
+        <mkdir dir="${build.classes.dir}"/>
+        <mkdir dir="${build.lib.dir}"/>
+    </target>
+
+    <target name="compile" depends="init" description="Compile LG AWT">
+        <javac  debug="${build.debug}" 
+		deprecation="${build.showdeprecation}" 
+		destdir="${build.classes.dir}" 
+		nowarn="true" 
+		source="1.5" 
+		sourcepath=""
+		target="1.5">
+            <!-- To add something to the classpath: -->
+	    <!-- <compilerarg value="-Xlint:unchecked" /> -->
+            <classpath>
+		<pathelement path="${classpath}"/>
+	    </classpath>
+	    <src path="${share.src.dir}"/>
+	    <src path="${platform.src.dir}"/>
+	    <include name="**"/>
+        </javac>
+    </target>
+
+    <target name="awt-jar" depends="init,compile">
+        <jar compress="${jar.compress}" jarfile="${build.lib.dir}/lg3d-awt.jar">
+            <fileset dir="${build.classes.dir}/" excludes="org/jdesktop/lg3d/jawt/test/**"/>
+        </jar>
+    </target>
+
+    <target name="awt-test-jar" depends="init,compile">
+        <jar compress="${jar.compress}" jarfile="${build.lib.dir}/lg3d-awt-test.jar">
+            <fileset dir="${build.classes.dir}/" includes="org/jdesktop/lg3d/jawt/test/**"/>
+        </jar>
+    </target>
+
+    <target name="jar" depends="awt-jar,awt-test-jar"/>
+
+    <target name="clean" description="Clean all build products.">
+        <delete dir="${build.platform.dir}"/>
+        <delete dir="${javadoc.dir}"/>
+        <delete file="${jar}"/>
+    </target>
+
+    <target name="run" depends="jar" description="Run test">
+        <java classname="org.jdesktop.lg3d.jawt.test.TestDesktop" fork="true">
+            <jvmarg value="-client"/>
+            <jvmarg value="-Xmx384m"/>
+            <jvmarg value="-Xincgc"/>
+            <jvmarg value="-Xms32m"/>
+            <jvmarg value="-XX:MaxGCPauseMillis=20"/>
+            <jvmarg value="-XX:CompileThreshold=500"/>
+            <jvmarg value="-XX:+UseAdaptiveSizePolicy"/>
+            <jvmarg value="-Djawt.toolkit=org.jdesktop.lg3d.jawt.test.TestEmbeddedToolkit"/>
+            <jvmarg value="-Dawt.toolkit=org.jdesktop.lg3d.jawt.JawtToolkit"/>
+            <jvmarg value="-Xbootclasspath/p:${build.lib.dir}/lg3d-awt.jar:${build.lib.dir}/lg3d-awt-test.jar"/>
+            <!-- Debug start -->
+            <jvmarg value="-Xdebug"/>
+            <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,address=8889,suspend=n"/>
+            <jvmarg value="-ea"/>
+            <!-- Debug end -->
+        </java>
+    </target>
+</project>
